@@ -11,7 +11,7 @@ try:
 
     # 연결 성공 시 확인 메시지 출력
     if conn.is_connected():
-        print("MySQL Database connection is successful!")
+        print("MySQL Database connection is successful!!")
 
     # 커서 객체를 만들어 SQL 쿼리를 실행
     cursor = conn.cursor()
