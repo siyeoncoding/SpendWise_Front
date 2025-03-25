@@ -9,12 +9,18 @@ try:
         database="spendwise_user"  # 사용할 데이터베이스 이름
     )
 
+
     # 연결 성공 시 확인 메시지 출력
     if conn.is_connected():
         print("MySQL Database connection is successful!!")
 
     # 커서 객체를 만들어 SQL 쿼리를 실행
     cursor = conn.cursor()
+    #테이블 조회해보기
+    cursor.execute("DESCRIBE usertable")
+    for row in cursor.fetchall():
+        print(row)
+
 
     # 예시: usertable 테이블에서 모든 사용자 정보 조회
     cursor.execute("SELECT * FROM usertable")
