@@ -18,7 +18,7 @@ async def signup(user: User):
 
     hashed_pw = hash_password(user.password)
     cursor.execute(
-        "INSERT INTO usertable (user_id, password, full_name, email) VALUES (%s, %s, %s, %s)",
+        "INSERT INTO usertable (user_id, user_password, full_name, email) VALUES (%s, %s, %s, %s)",
         (user.user_id, hashed_pw, user.full_name, user.email)
     )
     conn.commit()
@@ -40,7 +40,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     if db_user is None or not verify_password(form_data.password, db_user[2]):
         raise HTTPException(status_code=400, detail="아이디 또는 비밀번호가 올바르지 않습니다.")
 
-    token = create_access_token(data={"sub": db_user[0]})
+    token = create_access_token(data={"sub": str(db_user[0])})
     return {"access_token": token, "token_type": "bearer"}
 
 # 로그인된 사용자 정보 확인
