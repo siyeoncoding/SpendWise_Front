@@ -1,10 +1,10 @@
 #api경로설정을 위한 apirouter, 여러개 api를 하나로 묶어서 사용가능!
 #사용자 관련 api를 묶어서 사용자라우터로 묶을 수 있다...\
-
-from fastapi import APIRouter, HTTPException
+import bcrypt
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 import mysql.connector
-
+from fastapi.security import OAuth2PasswordRequestForm
 
 #pydantic model define
 class User(BaseModel):
@@ -29,45 +29,53 @@ def get_db_connection():
  #회원가입, 로그인
 router = APIRouter()
 
-#signup api
+# signup api
 @router.post('/signup')
 async def signup(user: User):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    #기존 유저가 있는가?
-    cursor.execute("SELECT * FROM usertable WHERE user_id = %s", (user.user_id))
+    cursor.execute("SELECT * FROM usertable WHERE user_id = %s", (user.user_id,))
     if cursor.fetchone():
         raise HTTPException(status_code=400, detail="이미 존재하는 아이디 입니다.")
-    password = user.password
 
-    cursor.execute("INSERT INTO usertable (user_id, password, full_name, email) VALUES (%s, %s, %s, %s)", (user.user_id, password,user.full_name,user.email))
+    hashed_pw = hash_password(user.password)
 
+    cursor.execute("INSERT INTO usertable (user_id, password, full_name, email) VALUES (%s, %s, %s, %s)",
+                   (user.user_id, hashed_pw, user.full_name, user.email))
     conn.commit()
-
+    cursor.close()
     conn.close()
+
     return {"message": "회원가입이 성공적으로 완료되었습니다!"}
 
-#로그인
+# login api
 @router.post('/login')
 async def login(user: LoginUser):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # 사용자 존재 여부 확인
     cursor.execute("SELECT * FROM usertable WHERE user_id = %s", (user.user_id,))
     db_user = cursor.fetchone()
+    cursor.close()
+    conn.close()
 
     if db_user is None:
         raise HTTPException(status_code=400, detail="존재하지 않는 정보입니다.")
 
-
-    # 입력된 비밀번호와 DB에 저장된 비밀번호 확인
-    if db_user[2] != user.password:  # db_user[2]는 user_password 열
-        raise HTTPException(status_code=400, detail="Invalid username or password")
-
-    cursor.close()
-    conn.close()
+    hashed_pw = db_user[2]  # 저장된 해시 비밀번호
+    if not verify_password(user.password, hashed_pw):
+        raise HTTPException(status_code=400, detail="아이디 또는 비밀번호가 올바르지 않습니다.")
 
     return {"message": "로그인 성공!"}
+
+# bcrypt를 이용한 암호화 함수
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+
+
+
 
