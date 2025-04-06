@@ -1,11 +1,11 @@
 from fastapi import FastAPI
-from routers import user_router
+from routers import user_router, spending_router
 
 app = FastAPI()
 
 # 사용자 관련 API 라우터 등록
 app.include_router(user_router.router, prefix="/user")
-
+app.include_router(spending_router.router)
 @app.get("/")
 async def root():
     return {"message": "SpendWise 백엔드입니다."}
