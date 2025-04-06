@@ -6,7 +6,8 @@ def get_db_connection():
             host="localhost",
             user="root",
             password="0113",
-            database="spendwise_user"
+            database="spendwise_user",
+            charset = 'utf8mb4'
         )
         return conn
 
