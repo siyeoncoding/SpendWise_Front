@@ -5,7 +5,7 @@ import 'screens/login_screen.dart';
 import 'screens/add_spending_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/calendar_screen.dart';
-
+import 'screens/auth_selection_screen.dart';
 
 /*
 void main() {
@@ -36,7 +36,7 @@ class MyApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: [Locale('ko', 'KR')], // ✅ 한국어 지원 추가
-      home: LoginScreen(), // ✅ 로그인 화면이 첫 화면
+      home: AuthSelectionScreen(), // ✅ 로그인 화면이 첫 화면
     );
   }
 }

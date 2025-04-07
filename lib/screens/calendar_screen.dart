@@ -2,62 +2,51 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../services/api_service.dart';
-import 'add_spending_screen.dart';
 import '../models/spending.dart';
+import 'add_spending_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
   @override
   _CalendarScreenState createState() => _CalendarScreenState();
 }
- //
+
 class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  Map<DateTime, List<Spending>> _spendingMap = {};
-  Map<DateTime, int> _dailyTotals = {}; // 날짜별 총합
+  Map<DateTime, int> _totalSpendingMap = {}; // 날짜별 소비 총합
+  List<Spending> _spendingList = []; // 선택한 날짜 소비 리스트
 
   @override
   void initState() {
     super.initState();
-    _loadSpendingData();
+    _fetchSummary();
+    _fetchSpendingsBySelectedDay(); // 오늘 날짜 소비 불러오기
   }
 
-  Future<void> _loadSpendingData() async {
-    final summary = await ApiService.fetchSummaryForCalendar();
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final todaySpendings = await ApiService.fetchSpendingsByDate(today); // 기본값
-
+  // ✅ 날짜별 소비 총합 불러오기
+  Future<void> _fetchSummary() async {
+    final summaryMap = await ApiService.fetchTotalSpendingsByDate();
     setState(() {
-      _dailyTotals = summary;
-      _selectedDay = DateTime.now();
-      _focusedDay = DateTime.now();
-      _spendingMap = {
-        _selectedDay!: todaySpendings,
-      };
+      _totalSpendingMap = summaryMap;
     });
   }
 
-  Future<void> _updateSpendingsForSelectedDay(DateTime day) async {
-    final formatted = DateFormat('yyyy-MM-dd').format(day);
-    final spendings = await ApiService.fetchSpendingsByDate(formatted);
+  // ✅ 선택한 날짜의 소비 내역 불러오기
+  Future<void> _fetchSpendingsBySelectedDay() async {
+    if (_selectedDay == null) return;
 
+    final formatted = DateFormat('yyyy-MM-dd').format(_selectedDay!);
+    final list = await ApiService.fetchSpendingsByDate(formatted);
     setState(() {
-      _selectedDay = day;
-      _focusedDay = day;
-      _spendingMap[day] = spendings;
+      _spendingList = list;
     });
   }
 
-  Color _getColorForAmount(int total) {
-    if (total < 10000) return Colors.yellow.shade200;
-    if (total < 30000) return Colors.orangeAccent;
+  // ✅ 총액에 따른 색상 반환
+  Color _getSpendingColor(int total) {
+    if (total < 10000) return Colors.green;
+    if (total < 30000) return Colors.yellow;
     return Colors.redAccent;
-  }
-
-  Color _getMarkerColor(DateTime day) {
-    final total = _dailyTotals[DateTime(day.year, day.month, day.day)];
-    if (total == null || total == 0) return Colors.transparent;
-    return _getColorForAmount(total);
   }
 
   @override
@@ -72,12 +61,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
             lastDay: DateTime.utc(2100, 12, 31),
             focusedDay: _focusedDay,
             selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+            onDaySelected: (selectedDay, focusedDay) {
+              setState(() {
+                _selectedDay = selectedDay;
+                _focusedDay = focusedDay;
+              });
+              _fetchSpendingsBySelectedDay();
+            },
             calendarBuilders: CalendarBuilders(
               markerBuilder: (context, day, events) {
-                final color = _getMarkerColor(day);
-                if (color == Colors.transparent) return null;
+                final normalizedDay = DateTime(day.year, day.month, day.day);
+                final total = _totalSpendingMap[normalizedDay];
+
+                if (total == null) return null;
+
+                final color = _getSpendingColor(total);
                 return Positioned(
-                  bottom: 4,
+                  top: 4,
                   child: Container(
                     width: 8,
                     height: 8,
@@ -89,42 +89,45 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 );
               },
             ),
-            onDaySelected: (selectedDay, focusedDay) {
-              _updateSpendingsForSelectedDay(selectedDay);
-            },
           ),
-          const SizedBox(height: 8),
+          if (_selectedDay != null && _spendingList.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(
+                "총 소비: ${_spendingList.fold(0, (sum, e) => sum + e.amount)}원",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
           Expanded(
-            child: _selectedDay != null &&
-                _spendingMap[_selectedDay] != null &&
-                _spendingMap[_selectedDay]!.isNotEmpty
-                ? ListView.builder(
-              itemCount: _spendingMap[_selectedDay]!.length,
+            child: _spendingList.isEmpty
+                ? Center(child: Text('선택한 날짜에 소비 내역이 없습니다.'))
+                : ListView.builder(
+              itemCount: _spendingList.length,
               itemBuilder: (context, index) {
-                final spending = _spendingMap[_selectedDay]![index];
+                final item = _spendingList[index];
                 return ListTile(
-                  leading: Icon(Icons.circle, color: Colors.blueAccent, size: 12),
-                  title: Text('${spending.category} - ${spending.amount}원'),
-                  subtitle: spending.memo != null
-                      ? Text(spending.memo!)
-                      : null,
+                  title: Text('${item.category} - ${item.amount}원'),
+                  subtitle: Text(item.memo ?? ''),
                 );
               },
-            )
-                : Center(child: Text('선택한 날짜에 소비 내역이 없습니다.')),
+            ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: _selectedDay == null
+          ? null
+          : FloatingActionButton.extended(
         onPressed: () {
-          if (_selectedDay != null) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => AddSpendingScreen(prefilledDate: _selectedDay),
-              ),
-            ).then((_) => _loadSpendingData()); // 돌아오면 갱신
-          }
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  AddSpendingScreen(prefilledDate: _selectedDay!),
+            ),
+          ).then((_) {
+            _fetchSummary();
+            _fetchSpendingsBySelectedDay();
+          });
         },
         label: Text('소비 등록', style: TextStyle(color: Colors.white)),
         icon: Icon(Icons.add, color: Colors.white),
