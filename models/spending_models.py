@@ -18,3 +18,9 @@ class Spending(BaseModel):
     memo: Optional[str] = None
     date: date
     created_at: Optional[datetime] = None
+
+
+# ✅ 날짜별 총 소비 금액 모델 (캘린더 색 표현용 등)
+class SpendingSummary(BaseModel):
+    date: date
+    total_amount: int
