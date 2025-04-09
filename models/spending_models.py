@@ -24,3 +24,8 @@ class Spending(BaseModel):
 class SpendingSummary(BaseModel):
     date: date
     total_amount: int
+
+# ✅ 카테고리별 소비 집계 모델
+class SpendingCategorySummary(BaseModel):
+    category: str
+    total: int
