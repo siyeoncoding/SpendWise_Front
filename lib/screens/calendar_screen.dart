@@ -4,6 +4,7 @@ import 'package:table_calendar/table_calendar.dart';
 import '../services/api_service.dart';
 import '../models/spending.dart';
 import 'add_spending_screen.dart';
+import 'analysis_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
   @override
@@ -13,17 +14,16 @@ class CalendarScreen extends StatefulWidget {
 class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  Map<DateTime, int> _totalSpendingMap = {}; // 날짜별 소비 총합
-  List<Spending> _spendingList = []; // 선택한 날짜 소비 리스트
+  Map<DateTime, int> _totalSpendingMap = {};
+  List<Spending> _spendingList = [];
 
   @override
   void initState() {
     super.initState();
     _fetchSummary();
-    _fetchSpendingsBySelectedDay(); // 오늘 날짜 소비 불러오기
+    _fetchSpendingsBySelectedDay();
   }
 
-  // ✅ 날짜별 소비 총합 불러오기
   Future<void> _fetchSummary() async {
     final summaryMap = await ApiService.fetchTotalSpendingsByDate();
     setState(() {
@@ -31,7 +31,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     });
   }
 
-  // ✅ 선택한 날짜의 소비 내역 불러오기
   Future<void> _fetchSpendingsBySelectedDay() async {
     if (_selectedDay == null) return;
 
@@ -42,17 +41,35 @@ class _CalendarScreenState extends State<CalendarScreen> {
     });
   }
 
-  // ✅ 총액에 따른 색상 반환
   Color _getSpendingColor(int total) {
     if (total < 10000) return Colors.green;
     if (total < 30000) return Colors.yellow;
     return Colors.redAccent;
   }
 
+  String _formatCurrency(int amount) {
+    return NumberFormat('#,###').format(amount) + '원'; // 천 단위 구분 기호 추가
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('소비 내역 캘린더')),
+      appBar: AppBar(
+        title: Text('소비 내역 캘린더'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.pie_chart),
+            tooltip: '소비 분석',
+            onPressed: () {
+              final selectedMonth = DateFormat('yyyy-MM').format(_focusedDay);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => AnalysisScreen(month: selectedMonth)),
+              );
+            },
+          )
+        ],
+      ),
       body: Column(
         children: [
           TableCalendar(
@@ -67,6 +84,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 _focusedDay = focusedDay;
               });
               _fetchSpendingsBySelectedDay();
+            },
+            onPageChanged: (focusedDay) {
+              setState(() {
+                _focusedDay = focusedDay;
+              });
             },
             calendarBuilders: CalendarBuilders(
               markerBuilder: (context, day, events) {
@@ -94,7 +116,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: Text(
-                "총 소비: ${_spendingList.fold(0, (sum, e) => sum + e.amount)}원",
+                "오늘의 총 소비: ${_formatCurrency(_spendingList.fold(0, (sum, e) => sum + e.amount))}",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -106,7 +128,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               itemBuilder: (context, index) {
                 final item = _spendingList[index];
                 return ListTile(
-                  title: Text('${item.category} - ${item.amount}원'),
+                  title: Text('${item.category} - ${_formatCurrency(item.amount)}'), // 포맷팅된 금액 사용
                   subtitle: Text(item.memo ?? ''),
                 );
               },

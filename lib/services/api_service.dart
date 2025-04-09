@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter_project/models/category_summary.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import '../models/spending.dart';
@@ -77,7 +78,7 @@ class ApiService {
   // 📈 날짜별 총 소비 금액 조회 (캘린더 색상용)
   static Future<Map<DateTime, int>> fetchTotalSpendingsByDate() async {
     final token = await storage.read(key: 'access_token');
-    final url = Uri.parse('$baseUrl/spending-summary');
+    final url = Uri.parse('$baseUrl/spending-summary/daily');
 
     final response = await http.get(
       url,
@@ -105,6 +106,25 @@ class ApiService {
 
 
 
+
+  //원형차트 그리기
+  static Future<List<CategorySummary>> fetchMonthlyCategorySummary(String month) async {
+    final token = await storage.read(key: 'access_token');
+    final url = Uri.parse('$baseUrl/spending-summary/monthly?month=$month');
+
+    final response = await http.get(
+      url,
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(utf8.decode(response.bodyBytes));
+      return data.map((e) => CategorySummary.fromJson(e)).toList();
+    } else {
+      print('❌ 소비 분석 API 차트실패 : ${response.body}');
+      return [];
+    }
+  }
 
 
 
