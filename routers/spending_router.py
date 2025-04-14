@@ -85,7 +85,7 @@ async def get_spending_summary(token: str = Depends(oauth2_scheme)):
 
     return result
 
-#✅ 한달 기준 날짜별 소비내역을 카테고리로 집계해야지
+# 한달 기준 날짜별 소비내역을 카테고리로 집계해야지
 @router.get("/spending-summary/monthly", tags=["Spending"])
 async def get_monthly_summary(
         month: str = Query(...),
