@@ -22,4 +22,4 @@ app.include_router(spending_router.router, tags=["Spending"])
 
 @app.get("/")
 async def root():
-    return {"message": "SpendWise 백엔드."}
+    return {"message": "SpendWise"}
