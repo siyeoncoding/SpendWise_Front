@@ -7,7 +7,7 @@ from typing import List
 
 from core.auth import verify_token
 from database.connection import get_db_connection
-from models.spending_models import Spending, SpendingCreate, SpendingSummary, SpendingCategorySummary
+from models.spending_models import Spending, SpendingCreate, SpendingSummary, SpendingCategorySummary, GoalCreate, GoalRead
 
 # ✅ 전체 태그 명시: Swagger UI에 "Spending"으로 정리
 router = APIRouter(tags=["Spending"])
@@ -108,5 +108,55 @@ async def get_monthly_summary(
     cursor.close()
     conn.close()
     return data
+
+
+
+#소비 목표 등록
+@router.post("/goal")
+async def set_goal(goal: GoalCreate, token: str = Depends(oauth2_scheme)):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO spending_goal (user_id, goal_amount, month)
+        VALUES (%s, %s, %s)
+        ON DUPLICATE KEY UPDATE goal_amount = VALUES(goal_amount)
+    """, (user_id, goal.goal_amount, goal.month))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return {"message": "소비 목표 설정 완료!"}
+
+
+#목표 조회
+@router.get("/goal", response_model=GoalRead)
+async def get_goal(month: str, token: str = Depends(oauth2_scheme)):
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT month, goal_amount FROM spending_goal
+        WHERE user_id = %s AND month = %s
+    """, (user_id, month))
+
+    goal = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    if goal:
+        return goal
+    else:
+        raise HTTPException(status_code=404, detail="목표가 설정되지 않았습니다.")
+
+
+
 
 

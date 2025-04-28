@@ -29,3 +29,14 @@ class SpendingSummary(BaseModel):
 class SpendingCategorySummary(BaseModel):
     category: str
     total: int
+
+
+#소비 목표 설정모델
+
+class GoalCreate(BaseModel):
+    goal_amount: int
+    month: str  # "2025-04" 이런 식으로
+
+class GoalRead(BaseModel):
+    month: str
+    goal_amount: int
