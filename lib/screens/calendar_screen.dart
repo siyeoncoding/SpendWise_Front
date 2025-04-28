@@ -22,6 +22,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     super.initState();
     _fetchSummary();
     _fetchSpendingsBySelectedDay();
+    _checkGoalExceeded();
   }
 
   Future<void> _fetchSummary() async {
@@ -41,6 +42,90 @@ class _CalendarScreenState extends State<CalendarScreen> {
     });
   }
 
+  Future<void> _checkGoalExceeded() async {
+    final now = DateTime.now();
+    final monthStr = DateFormat('yyyy-MM').format(now);
+    final goal = await ApiService.fetchGoal(monthStr);
+
+    if (goal != null) {
+      final totalSpent = _totalSpendingMap.values.fold(0, (sum, e) => sum + e);
+      if (totalSpent > goal) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text('⚠️ 목표 초과'),
+            content: Text('이번 달 소비가 설정한 목표를 초과했습니다!'),
+            actions: [
+              TextButton(
+                child: Text('확인'),
+                onPressed: () => Navigator.pop(context),
+              )
+            ],
+          ),
+        );
+      }
+    }
+  }
+
+  void _showGoalSettingDialog() async {
+    final TextEditingController _controller = TextEditingController();
+    final now = DateTime.now();
+    final monthStr = DateFormat('yyyy-MM').format(now);
+
+    final currentGoal = await ApiService.fetchGoal(monthStr);
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('소비 목표 설정'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (currentGoal != null)
+              Text('현재 목표: ${NumberFormat('#,###').format(currentGoal)}원',
+                  style: TextStyle(fontWeight: FontWeight.bold))
+            else
+              Text('소비 목표가 설정되지 않았습니다.'),
+            SizedBox(height: 16),
+            TextField(
+              controller: _controller,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                hintText: '새로운 목표 금액을 입력하세요',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            child: Text('취소'),
+            onPressed: () => Navigator.pop(context),
+          ),
+          TextButton(
+            child: Text('저장'),
+            onPressed: () async {
+              final input = _controller.text.trim();
+              if (input.isNotEmpty) {
+                final success = await ApiService.setGoal(int.parse(input), monthStr);
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('소비 목표가 저장되었습니다.')),
+                  );
+                  Navigator.pop(context);
+                  _fetchSummary();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('목표 저장 실패')),
+                  );
+                }
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Color _getSpendingColor(int total) {
     if (total < 10000) return Colors.green;
     if (total < 30000) return Colors.yellow;
@@ -48,7 +133,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   String _formatCurrency(int amount) {
-    return NumberFormat('#,###').format(amount) + '원'; // 천 단위 구분 기호 추가
+    return NumberFormat('#,###').format(amount) + '원';
   }
 
   @override
@@ -67,7 +152,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 MaterialPageRoute(builder: (_) => AnalysisScreen(month: selectedMonth)),
               );
             },
-          )
+          ),
+          IconButton(
+            icon: Icon(Icons.flag), // ✅ 소비 목표 설정 버튼 추가
+            tooltip: '소비 목표 설정',
+            onPressed: _showGoalSettingDialog,
+          ),
         ],
       ),
       body: Column(
@@ -128,7 +218,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               itemBuilder: (context, index) {
                 final item = _spendingList[index];
                 return ListTile(
-                  title: Text('${item.category} - ${_formatCurrency(item.amount)}'), // 포맷팅된 금액 사용
+                  title: Text('${item.category} - ${_formatCurrency(item.amount)}'),
                   subtitle: Text(item.memo ?? ''),
                 );
               },
@@ -143,8 +233,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) =>
-                  AddSpendingScreen(prefilledDate: _selectedDay!),
+              builder: (context) => AddSpendingScreen(prefilledDate: _selectedDay!),
             ),
           ).then((_) {
             _fetchSummary();

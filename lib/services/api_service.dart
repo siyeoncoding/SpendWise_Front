@@ -1,11 +1,11 @@
 import 'dart:convert';
-import 'package:flutter_project/models/category_summary.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import '../models/spending.dart';
+import '../models/category_summary.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://10.0.2.2:8000'; // 에뮬레이터에서 localhost
+  static const String baseUrl = 'http://10.0.2.2:8000'; // 에뮬레이터용
   static final storage = FlutterSecureStorage();
 
   // 🔐 로그인 요청
@@ -39,7 +39,7 @@ class ApiService {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-      body: json.encode({
+      body: jsonEncode({
         'category': category,
         'amount': amount,
         'memo': memo,
@@ -48,7 +48,7 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
-      print('✅ 소비 등록 성공!');
+      print('✅ 소비 등록 성공');
       return true;
     } else {
       print('❌ 소비 등록 실패: ${response.body}');
@@ -56,7 +56,7 @@ class ApiService {
     }
   }
 
-  // 📦 특정 날짜의 소비 내역 조회
+  // 📦 특정 날짜 소비 내역 조회
   static Future<List<Spending>> fetchSpendingsByDate(String date) async {
     final token = await storage.read(key: 'access_token');
     final url = Uri.parse('$baseUrl/spending?date=$date');
@@ -68,14 +68,14 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final List data = jsonDecode(utf8.decode(response.bodyBytes));
-      return data.map((item) => Spending.fromJson(item)).toList();
+      return data.map((e) => Spending.fromJson(e)).toList();
     } else {
-      print('❌ 날짜별 소비 조회 실패: ${response.body}');
+      print('❌ 소비 조회 실패: ${response.body}');
       return [];
     }
   }
 
-  // 📈 날짜별 총 소비 금액 조회 (캘린더 색상용)
+  // 📅 날짜별 소비 총합 조회
   static Future<Map<DateTime, int>> fetchTotalSpendingsByDate() async {
     final token = await storage.read(key: 'access_token');
     final url = Uri.parse('$baseUrl/spending-summary/daily');
@@ -88,26 +88,19 @@ class ApiService {
     if (response.statusCode == 200) {
       final List data = jsonDecode(utf8.decode(response.bodyBytes));
       final Map<DateTime, int> result = {};
+
       for (var item in data) {
-        try {
-          final date = DateTime.parse(item['date']);
-          final normalized = DateTime(date.year, date.month, date.day);
-          result[normalized] = item['total_amount'];
-        } catch (e) {
-          print('❌ 날짜 파싱 실패: $e');
-        }
+        final date = DateTime.parse(item['date']);
+        result[DateTime(date.year, date.month, date.day)] = item['total_amount'];
       }
       return result;
     } else {
-      print('❌ 소비 총합 조회 실패: ${response.body}');
+      print('❌ 날짜별 소비 조회 실패: ${response.body}');
       return {};
     }
   }
 
-
-
-
-  //원형차트 그리기
+//원형차트 그리기
   static Future<List<CategorySummary>> fetchMonthlyCategorySummary(String month) async {
     final token = await storage.read(key: 'access_token');
     final url = Uri.parse('$baseUrl/spending-summary/monthly?month=$month');
@@ -126,9 +119,48 @@ class ApiService {
     }
   }
 
+  // 🎯 소비 목표 설정
+  static Future<bool> setGoal(int goalAmount, String month) async {
+    final token = await storage.read(key: 'access_token');
+    final url = Uri.parse('$baseUrl/goal');
 
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'goal_amount': goalAmount,
+        'month': month,
+      }),
+    );
 
+    if (response.statusCode == 200) {
+      print('✅ 목표 설정 성공');
+      return true;
+    } else {
+      print('❌ 목표 설정 실패: ${response.body}');
+      return false;
+    }
+  }
 
+  // 🎯 소비 목표 조회
+  static Future<int?> fetchGoal(String month) async {
+    final token = await storage.read(key: 'access_token');
+    final url = Uri.parse('$baseUrl/goal?month=$month');
 
+    final response = await http.get(
+      url,
+      headers: {'Authorization': 'Bearer $token'},
+    );
 
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['goal_amount'];
+    } else {
+      print('❌ 목표 조회 실패: ${response.body}');
+      return null;
+    }
+  }
 }

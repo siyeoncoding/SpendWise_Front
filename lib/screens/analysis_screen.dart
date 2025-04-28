@@ -3,11 +3,9 @@ import 'package:fl_chart/fl_chart.dart';
 import '../services/api_service.dart';
 import '../models/category_summary.dart';
 import 'package:intl/intl.dart';
-import 'analysis_screen.dart';
 
 class AnalysisScreen extends StatefulWidget {
   final String month;
-
   AnalysisScreen({required this.month});
 
   @override
@@ -25,16 +23,13 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
 
   Future<void> _loadCategoryData(String monthStr) async {
     final list = await ApiService.fetchMonthlyCategorySummary(monthStr);
-
     setState(() {
-      dataMap = {
-        for (var item in list) item.category: item.total.toDouble()
-      };
+      dataMap = {for (var item in list) item.category: item.total.toDouble()};
     });
   }
 
   String _formatCurrency(double amount) {
-    return NumberFormat('#,###').format(amount.toInt()) + '원'; // 천 단위 구분 기호 추가
+    return NumberFormat('#,###').format(amount.toInt()) + '원';
   }
 
   @override
@@ -50,7 +45,6 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ✅ 차트
             Expanded(
               flex: 2,
               child: AspectRatio(
@@ -66,16 +60,14 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
               ),
             ),
             SizedBox(width: 16),
-            // ✅ 범례 리스트
             Expanded(
               flex: 2,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "총 소비 금액: ${_formatCurrency(total)}", // 포맷팅된 금액 사용
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16),
+                    "총 소비 금액: ${_formatCurrency(total)}",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   SizedBox(height: 8),
                   ..._getSortedEntries().map((entry) {
@@ -95,7 +87,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                           ),
                           Expanded(child: Text(entry.key)),
                           Text(
-                            '${_formatCurrency(entry.value)} (${percentage.toStringAsFixed(1)}%)', // 포맷팅된 금액 사용
+                            '${_formatCurrency(entry.value)} (${percentage.toStringAsFixed(1)}%)',
                             style: TextStyle(fontSize: 13),
                           ),
                         ],
@@ -113,10 +105,8 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
 
   List<Color> categoryColors = Colors.primaries;
 
-  // ✅ 퍼센트 텍스트로 표시
   List<PieChartSectionData> _getChartSections(double total) {
-    final List<String> keys = dataMap.keys.toList();
-
+    final keys = dataMap.keys.toList();
     return List.generate(keys.length, (i) {
       final category = keys[i];
       final value = dataMap[category]!;
@@ -141,8 +131,8 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   }
 
   List<MapEntry<String, double>> _getSortedEntries() {
-    var sortedEntries = dataMap.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    return sortedEntries;
+    var sorted = dataMap.entries.toList();
+    sorted.sort((a, b) => b.value.compareTo(a.value));
+    return sorted;
   }
 }
