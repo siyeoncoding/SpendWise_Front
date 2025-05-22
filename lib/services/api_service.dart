@@ -120,7 +120,36 @@ class ApiService {
   }
 
   // 🎯 소비 목표 설정
-  static Future<bool> setGoal(int goalAmount, String month) async {
+  //
+  //
+  // static Future<bool> setGoal(int goalAmount, String month) async {
+  //   final token = await storage.read(key: 'access_token');
+  //   final url = Uri.parse('$baseUrl/goal');
+  //
+  //   final response = await http.post(
+  //     url,
+  //     headers: {
+  //       'Content-Type': 'application/json',
+  //       'Authorization': 'Bearer $token',
+  //     },
+  //     body: jsonEncode({
+  //       'goal_amount': goalAmount,
+  //       'month': month,
+  //     }),
+  //   );
+  //
+  //   if (response.statusCode == 200) {
+  //     print('✅ 목표 설정 성공');
+  //     return true;
+  //   } else {
+  //     print('❌ 목표 설정 실패: ${response.body}');
+  //     return false;
+  //   }
+  // }
+
+
+  // 🎯 소비 목표 설정 (message 등 추가 응답 처리용)
+  static Future<Map<String, dynamic>> setGoal(int goalAmount, String month) async {
     final token = await storage.read(key: 'access_token');
     final url = Uri.parse('$baseUrl/goal');
 
@@ -137,15 +166,37 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
-      print('✅ 목표 설정 성공');
-      return true;
+      final data = jsonDecode(utf8.decode(response.bodyBytes)); // ✅ 인코딩 깨짐 방지
+      return data;
     } else {
       print('❌ 목표 설정 실패: ${response.body}');
-      return false;
+      throw Exception('목표 설정 실패: ${response.statusCode}');
     }
   }
 
+
   // 🎯 소비 목표 조회
+
+  static Future<int?> fetchGoal(String month) async {
+    final token = await storage.read(key: 'access_token');
+    final url = Uri.parse('$baseUrl/goal?month=$month');
+
+    final response = await http.get(
+      url,
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['goal_amount'];
+    } else if (response.statusCode == 404) {
+      return null; // ❗ 목표가 없을 때는 null 반환
+    } else {
+      print('❌ 목표 조회 실패: ${response.body}');
+      return null;
+    }
+  }
+  /*
   static Future<int?> fetchGoal(String month) async {
     final token = await storage.read(key: 'access_token');
     final url = Uri.parse('$baseUrl/goal?month=$month');
@@ -163,4 +214,6 @@ class ApiService {
       return null;
     }
   }
+  */
+
 }

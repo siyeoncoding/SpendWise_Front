@@ -48,8 +48,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final goal = await ApiService.fetchGoal(monthStr);
 
     if (goal != null) {
-      final totalSpent = _totalSpendingMap.values.fold(0, (sum, e) => sum + e);
-      if (totalSpent > goal) {
+      final currentMonthTotal = _totalSpendingMap.entries
+          .where((entry) => DateFormat('yyyy-MM').format(entry.key) == monthStr)
+          .fold(0, (sum, entry) => sum + entry.value);
+
+      if (currentMonthTotal > goal) {
         showDialog(
           context: context,
           builder: (_) => AlertDialog(
@@ -66,6 +69,65 @@ class _CalendarScreenState extends State<CalendarScreen> {
       }
     }
   }
+  //
+  // void _showGoalSettingDialog() async {
+  //   final TextEditingController _controller = TextEditingController();
+  //   final now = DateTime.now();
+  //   final monthStr = DateFormat('yyyy-MM').format(now);
+  //
+  //   final currentGoal = await ApiService.fetchGoal(monthStr);
+  //
+  //   showDialog(
+  //     context: context,
+  //     builder: (_) => AlertDialog(
+  //       title: Text('소비 목표 설정'),
+  //       content: Column(
+  //         mainAxisSize: MainAxisSize.min,
+  //         children: [
+  //           if (currentGoal != null)
+  //             Text('현재 목표: ${NumberFormat('#,###').format(currentGoal)}원',
+  //                 style: TextStyle(fontWeight: FontWeight.bold))
+  //           else
+  //             Text('소비 목표가 설정되지 않았습니다.'),
+  //           SizedBox(height: 16),
+  //           TextField(
+  //             controller: _controller,
+  //             keyboardType: TextInputType.number,
+  //             decoration: InputDecoration(
+  //               hintText: '새로운 목표 금액을 입력하세요',
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           child: Text('취소'),
+  //           onPressed: () => Navigator.pop(context),
+  //         ),
+  //         TextButton(
+  //           child: Text('저장'),
+  //           onPressed: () async {
+  //             final input = _controller.text.trim();
+  //             if (input.isNotEmpty) {
+  //               final success = await ApiService.setGoal(int.parse(input), monthStr);
+  //               if (success) {
+  //                 ScaffoldMessenger.of(context).showSnackBar(
+  //                   SnackBar(content: Text('소비 목표가 저장되었습니다.')),
+  //                 );
+  //                 Navigator.pop(context);
+  //                 _fetchSummary();
+  //               } else {
+  //                 ScaffoldMessenger.of(context).showSnackBar(
+  //                   SnackBar(content: Text('목표 저장 실패')),
+  //                 );
+  //               }
+  //             }
+  //           },
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   void _showGoalSettingDialog() async {
     final TextEditingController _controller = TextEditingController();
@@ -82,8 +144,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (currentGoal != null)
-              Text('현재 목표: ${NumberFormat('#,###').format(currentGoal)}원',
-                  style: TextStyle(fontWeight: FontWeight.bold))
+              Text(
+                '현재 목표: ${NumberFormat('#,###').format(currentGoal)}원',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              )
             else
               Text('소비 목표가 설정되지 않았습니다.'),
             SizedBox(height: 16),
@@ -106,16 +170,37 @@ class _CalendarScreenState extends State<CalendarScreen> {
             onPressed: () async {
               final input = _controller.text.trim();
               if (input.isNotEmpty) {
-                final success = await ApiService.setGoal(int.parse(input), monthStr);
-                if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('소비 목표가 저장되었습니다.')),
+                try {
+                  final response = await ApiService.setGoal(
+                    int.parse(input),
+                    monthStr,
                   );
-                  Navigator.pop(context);
-                  _fetchSummary();
-                } else {
+
+                  final total = response['total_spending'];
+                  final goal = response['goal'];
+                  final messageText = '현재 총 소비: ${NumberFormat('#,###').format(total)}원 / 목표: ${NumberFormat('#,###').format(goal)}원';
+
+                  Navigator.pop(context); // 설정창 닫기
+
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: Text("소비 목표 등록 결과"),
+                      content: Text(messageText),
+                      actions: [
+                        TextButton(
+                          child: Text("확인"),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  _fetchSummary(); // 캘린더 업데이트
+
+                } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('목표 저장 실패')),
+                    SnackBar(content: Text('목표 저장 실패: ${e.toString()}')),
                   );
                 }
               }
@@ -125,6 +210,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ),
     );
   }
+
 
   Color _getSpendingColor(int total) {
     if (total < 10000) return Colors.green;
