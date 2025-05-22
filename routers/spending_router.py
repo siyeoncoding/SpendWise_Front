@@ -144,50 +144,110 @@ async def get_monthly_summary(
 #     return data
 
 
-# 소비 목표 설정 (있으면 업데이트)
+#소비수정
+#
 @router.post("/goal")
 async def set_goal(goal: GoalCreate, token: str = Depends(oauth2_scheme)):
     payload = verify_token(token)
     user_id = payload.get("sub")
 
     conn = get_db_connection()
-    # 👇 여기에 buffered=True 추가
-    cursor = conn.cursor(buffered=True)
+    cursor = conn.cursor(dictionary=True, buffered=True)
+
     try:
-        cursor.execute(
-            """
+        # 1. 목표 존재 여부 확인 및 저장/업데이트
+        cursor.execute("""
             SELECT * FROM spending_goal
             WHERE user_id = %s AND month = %s
-            """,
-            (user_id, goal.month)
-        )
+        """, (user_id, goal.month))
         existing = cursor.fetchone()
 
         if existing:
-            # 이미 존재하면 업데이트
-            cursor.execute(
-                """
+            cursor.execute("""
                 UPDATE spending_goal
                 SET goal_amount = %s
                 WHERE user_id = %s AND month = %s
-                """,
-                (goal.goal_amount, user_id, goal.month)
-            )
+            """, (goal.goal_amount, user_id, goal.month))
         else:
-            # 없으면 새로 삽입
-            cursor.execute(
-                """
+            cursor.execute("""
                 INSERT INTO spending_goal (user_id, month, goal_amount)
                 VALUES (%s, %s, %s)
-                """,
-                (user_id, goal.month, goal.goal_amount)
-            )
+            """, (user_id, goal.month, goal.goal_amount))
         conn.commit()
+
+        # ✅ 2. 소비 총합 조회 (수정됨)
+        year, month = map(int, goal.month.split('-'))
+        cursor.execute("""
+            SELECT SUM(amount) as total_spending
+            FROM spending
+            WHERE user_id = %s AND YEAR(date) = %s AND MONTH(date) = %s
+        """, (user_id, year, month))
+        total = cursor.fetchone().get("total_spending") or 0
+
+        # 3. 목표 초과 여부 판단
+        if total > goal.goal_amount:
+            message = f"소비 목표({goal.goal_amount}원)를 초과했어요! 현재 총 소비: {total}원"
+        else:
+            message = f"목표가 저장되었습니다. 현재 총 소비: {total}원 / 목표: {goal.goal_amount}원"
+
     finally:
         cursor.close()
         conn.close()
 
-    return {"message": "목표가 성공적으로 저장되었습니다."}
+    return {
+        "message": message,
+        "total_spending": total,
+        "goal": goal.goal_amount
+    }
+
+# 소비 목표 설정 (있으면 업데이트)
+# @router.post("/goal")
+# async def set_goal(goal: GoalCreate, token: str = Depends(oauth2_scheme)):
+#     payload = verify_token(token)
+#     user_id = payload.get("sub")
+#
+#     conn = get_db_connection()
+#     # 👇 여기에 buffered=True 추가
+#     cursor = conn.cursor(buffered=True)
+#     try:
+#         cursor.execute(
+#             """
+#             SELECT * FROM spending_goal
+#             WHERE user_id = %s AND month = %s
+#             """,
+#             (user_id, goal.month)
+#         )
+#         existing = cursor.fetchone()
+#
+#         if existing:
+#             # 이미 존재하면 업데이트
+#             cursor.execute(
+#                 """
+#                 UPDATE spending_goal
+#                 SET goal_amount = %s
+#                 WHERE user_id = %s AND month = %s
+#                 """,
+#                 (goal.goal_amount, user_id, goal.month)
+#             )
+#         else:
+#             # 없으면 새로 삽입
+#             cursor.execute(
+#                 """
+#                 INSERT INTO spending_goal (user_id, month, goal_amount)
+#                 VALUES (%s, %s, %s)
+#                 """,
+#                 (user_id, goal.month, goal.goal_amount)
+#             )
+#         conn.commit()
+#     finally:
+#         cursor.close()
+#         conn.close()
+#
+#     return {"message": "목표가 성공적으로 저장되었습니다."}
+#
+
+
+
 
 
 #  소비 목표 조회
