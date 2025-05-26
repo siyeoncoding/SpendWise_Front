@@ -32,3 +32,5 @@ async def predict_next_category(input_data: InputSpending):
         "top_3_predictions": result["top_3"],
         "message": f"🔮 다음 달에는 '{result['prediction']}' 분야의 소비가 가장 많을 것으로 예상됩니다."
     }
+
+#git test
