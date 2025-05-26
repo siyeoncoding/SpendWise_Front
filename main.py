@@ -15,13 +15,15 @@ from fastapi import FastAPI
 from routers import user_router, spending_router, test_router
 
 from routers import analyze_router
-
+from routers import predict_router
 
 app = FastAPI()
 
 app.include_router(user_router.router, prefix="/user", tags=["User"])
 app.include_router(spending_router.router, tags=["Spending"])
 app.include_router(analyze_router.router, tags=["Analysis"])
+app.include_router(predict_router.router, tags=["Prediction"])
+
 
 @app.get("/")
 async def root():
