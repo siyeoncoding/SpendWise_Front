@@ -20,6 +20,8 @@ class InputSpending(BaseModel):
     class Config:
         populate_by_name = True
 
+# routers/predict_router.py
+
 @router.post("/predict-next-month", tags=["Prediction"])
 async def predict_next_category(input_data: InputSpending):
     result = predict_category(input_data.dict(by_alias=True))
@@ -27,5 +29,6 @@ async def predict_next_category(input_data: InputSpending):
     return {
         "predicted_category": result["prediction"],
         "confidence": result["confidence"],
+        "top_3_predictions": result["top_3"],
         "message": f"🔮 다음 달에는 '{result['prediction']}' 분야의 소비가 가장 많을 것으로 예상됩니다."
     }
