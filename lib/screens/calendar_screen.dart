@@ -20,9 +20,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchSummary();
+    _selectedDay = _focusedDay;
+    _fetchSummary().then((_) => _checkGoalExceeded());
     _fetchSpendingsBySelectedDay();
-    _checkGoalExceeded();
   }
 
   Future<void> _fetchSummary() async {
@@ -34,7 +34,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Future<void> _fetchSpendingsBySelectedDay() async {
     if (_selectedDay == null) return;
-
     final formatted = DateFormat('yyyy-MM-dd').format(_selectedDay!);
     final list = await ApiService.fetchSpendingsByDate(formatted);
     setState(() {
@@ -56,11 +55,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
         showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            title: Text('⚠️ 목표 초과'),
+            title: const Text('⚠️ 목표 초과'),
             content: Text('이번 달 소비가 설정한 목표를 초과했습니다!'),
             actions: [
               TextButton(
-                child: Text('확인'),
+                child: const Text('확인'),
                 onPressed: () => Navigator.pop(context),
               )
             ],
@@ -69,65 +68,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
       }
     }
   }
-  //
-  // void _showGoalSettingDialog() async {
-  //   final TextEditingController _controller = TextEditingController();
-  //   final now = DateTime.now();
-  //   final monthStr = DateFormat('yyyy-MM').format(now);
-  //
-  //   final currentGoal = await ApiService.fetchGoal(monthStr);
-  //
-  //   showDialog(
-  //     context: context,
-  //     builder: (_) => AlertDialog(
-  //       title: Text('소비 목표 설정'),
-  //       content: Column(
-  //         mainAxisSize: MainAxisSize.min,
-  //         children: [
-  //           if (currentGoal != null)
-  //             Text('현재 목표: ${NumberFormat('#,###').format(currentGoal)}원',
-  //                 style: TextStyle(fontWeight: FontWeight.bold))
-  //           else
-  //             Text('소비 목표가 설정되지 않았습니다.'),
-  //           SizedBox(height: 16),
-  //           TextField(
-  //             controller: _controller,
-  //             keyboardType: TextInputType.number,
-  //             decoration: InputDecoration(
-  //               hintText: '새로운 목표 금액을 입력하세요',
-  //             ),
-  //           ),
-  //         ],
-  //       ),
-  //       actions: [
-  //         TextButton(
-  //           child: Text('취소'),
-  //           onPressed: () => Navigator.pop(context),
-  //         ),
-  //         TextButton(
-  //           child: Text('저장'),
-  //           onPressed: () async {
-  //             final input = _controller.text.trim();
-  //             if (input.isNotEmpty) {
-  //               final success = await ApiService.setGoal(int.parse(input), monthStr);
-  //               if (success) {
-  //                 ScaffoldMessenger.of(context).showSnackBar(
-  //                   SnackBar(content: Text('소비 목표가 저장되었습니다.')),
-  //                 );
-  //                 Navigator.pop(context);
-  //                 _fetchSummary();
-  //               } else {
-  //                 ScaffoldMessenger.of(context).showSnackBar(
-  //                   SnackBar(content: Text('목표 저장 실패')),
-  //                 );
-  //               }
-  //             }
-  //           },
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
 
   void _showGoalSettingDialog() async {
     final TextEditingController _controller = TextEditingController();
@@ -139,22 +79,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('소비 목표 설정'),
+        title: const Text('소비 목표 설정'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (currentGoal != null)
               Text(
                 '현재 목표: ${NumberFormat('#,###').format(currentGoal)}원',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               )
             else
-              Text('소비 목표가 설정되지 않았습니다.'),
-            SizedBox(height: 16),
+              const Text('소비 목표가 설정되지 않았습니다.'),
+            const SizedBox(height: 16),
             TextField(
               controller: _controller,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: '새로운 목표 금액을 입력하세요',
               ),
             ),
@@ -162,11 +102,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
         actions: [
           TextButton(
-            child: Text('취소'),
+            child: const Text('취소'),
             onPressed: () => Navigator.pop(context),
           ),
           TextButton(
-            child: Text('저장'),
+            child: const Text('저장'),
             onPressed: () async {
               final input = _controller.text.trim();
               if (input.isNotEmpty) {
@@ -178,25 +118,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
                   final total = response['total_spending'];
                   final goal = response['goal'];
-                  final messageText = '현재 총 소비: ${NumberFormat('#,###').format(total)}원 / 목표: ${NumberFormat('#,###').format(goal)}원';
+                  final messageText = '현재 총 소비: ${NumberFormat('#,###').format(total)}원\n목표: ${NumberFormat('#,###').format(goal)}원';
 
                   Navigator.pop(context); // 설정창 닫기
 
                   showDialog(
                     context: context,
                     builder: (_) => AlertDialog(
-                      title: Text("소비 목표 등록 결과"),
+                      title: const Text("소비 목표 등록 결과"),
                       content: Text(messageText),
                       actions: [
                         TextButton(
-                          child: Text("확인"),
+                          child: const Text("확인"),
                           onPressed: () => Navigator.pop(context),
                         ),
                       ],
                     ),
                   );
 
-                  _fetchSummary(); // 캘린더 업데이트
+                  _fetchSummary();
 
                 } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -211,10 +151,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-
   Color _getSpendingColor(int total) {
     if (total < 10000) return Colors.green;
-    if (total < 30000) return Colors.yellow;
+    if (total < 30000) return Colors.orange;
     return Colors.redAccent;
   }
 
@@ -226,10 +165,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('소비 내역 캘린더'),
+        title: const Text('소비 내역 캘린더'),
         actions: [
           IconButton(
-            icon: Icon(Icons.pie_chart),
+            icon: const Icon(Icons.pie_chart),
             tooltip: '소비 분석',
             onPressed: () {
               final selectedMonth = DateFormat('yyyy-MM').format(_focusedDay);
@@ -240,7 +179,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             },
           ),
           IconButton(
-            icon: Icon(Icons.flag), // ✅ 소비 목표 설정 버튼 추가
+            icon: const Icon(Icons.flag),
             tooltip: '소비 목표 설정',
             onPressed: _showGoalSettingDialog,
           ),
@@ -270,7 +209,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
               markerBuilder: (context, day, events) {
                 final normalizedDay = DateTime(day.year, day.month, day.day);
                 final total = _totalSpendingMap[normalizedDay];
-
                 if (total == null) return null;
 
                 final color = _getSpendingColor(total);
@@ -293,12 +231,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
               padding: const EdgeInsets.only(top: 8.0),
               child: Text(
                 "오늘의 총 소비: ${_formatCurrency(_spendingList.fold(0, (sum, e) => sum + e.amount))}",
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
           Expanded(
             child: _spendingList.isEmpty
-                ? Center(child: Text('선택한 날짜에 소비 내역이 없습니다.'))
+                ? const Center(child: Text('선택한 날짜에 소비 내역이 없습니다.'))
                 : ListView.builder(
               itemCount: _spendingList.length,
               itemBuilder: (context, index) {
@@ -326,9 +264,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
             _fetchSpendingsBySelectedDay();
           });
         },
-        label: Text('소비 등록', style: TextStyle(color: Colors.white)),
-        icon: Icon(Icons.add, color: Colors.white),
-        backgroundColor: Color(0xFF9EC6F3),
+        label: const Text('소비 등록', style: TextStyle(color: Colors.white)),
+        icon: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: const Color(0xFF9EC6F3),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
