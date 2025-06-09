@@ -91,7 +91,7 @@ async def predict_total_spending(input_data: SpendingRatio):
         "message": comment
     }
 
-# ✅ 주요 소비 카테고리 예측용 모델 입력
+# 주요 소비 카테고리 예측용 모델 입력
 class InputSpending(BaseModel):
     food: float
     transport: float
@@ -102,7 +102,7 @@ class InputSpending(BaseModel):
     education: Optional[float] = 0
     etc: Optional[float] = 0
 
-# ✅ 주요 소비 카테고리 예측 API
+# 주요 소비 카테고리 예측 API
 @router.post("/predict-next-month", tags=["Prediction"])
 async def predict_next_category(input_data: InputSpending):
     parsed = input_data.dict()
