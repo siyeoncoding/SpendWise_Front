@@ -1,8 +1,36 @@
-### Example user template template
-### Example user template
+# ───── Miscellaneous ─────
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
 
-# IntelliJ project files
-.idea
+# ───── IDE / Editor ─────
+.idea/
 *.iml
-out
-gen
+*.ipr
+*.iws
+# .vscode/
+
+# ───── Flutter / Dart ─────
+/frontend/build/                       # Flutter build only
+/frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.pub-cache/
+frontend/.pub/
+**/doc/api/
+**/ios/Flutter/.last_build_id
+
+# ───── Android ─────
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# ───── Symbolication / Obfuscation ─────
+app.*.symbols
+app.*.map.json
